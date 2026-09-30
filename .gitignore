@@ -1,0 +1,4 @@
+WaterFill_v2/secrets.h
+build/
+# original sketch hardcodes the Wi-Fi password in this file; keep it out of git history
+source/WaterFill_A6_R6/A_WiFi.ino
