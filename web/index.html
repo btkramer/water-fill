@@ -1,0 +1,948 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<meta name="theme-color" content="#f9f9f7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#0d0d0d" media="(prefers-color-scheme: dark)">
+<title>WaterFill</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3C16 3 6 14 6 20a10 10 0 0020 0C26 14 16 3 16 3z' fill='%232a78d6'/%3E%3C/svg%3E">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#f9f9f7; --surface:#fcfcfb; --sunken:#f0efec; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10); --shadow:0 1px 2px rgba(11,11,11,.06);
+  --accent:#256abf; --accent-ink:#fff; --accent-soft:rgba(37,106,191,.10);
+  --t0:#2a78d6; --t1:#eb6834; --t2:#1baf7a; --pump:#4a3aa7; --oz:#898781;
+  --good:#0ca30c; --good-ink:#006300; --warn:#fab219; --warn-ink:#7a5200; --serious:#ec835a; --serious-ink:#a13d12;
+  --crit:#d03b3b; --crit-ink:#a82424;
+  --pipe:#c3c2b7; --steel:#898781;
+  --r:14px;
+}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme="light"])){
+  color-scheme:dark;
+  --bg:#0d0d0d; --surface:#1a1a19; --sunken:#242422; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --shadow:none;
+  --accent:#2a78d6; --accent-ink:#fff; --accent-soft:rgba(57,135,229,.16);
+  --t0:#3987e5; --t1:#d95926; --t2:#199e70; --pump:#9085e9;
+  --good-ink:#0ca30c; --warn-ink:#fab219; --serious-ink:#ec835a; --crit-ink:#ee6b6b;
+  --pipe:#383835;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0d0d0d; --surface:#1a1a19; --sunken:#242422; --ink:#fff; --ink2:#c3c2b7; --muted:#898781;
+  --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --shadow:none;
+  --accent:#2a78d6; --accent-ink:#fff; --accent-soft:rgba(57,135,229,.16);
+  --t0:#3987e5; --t1:#d95926; --t2:#199e70; --pump:#9085e9;
+  --good-ink:#0ca30c; --warn-ink:#fab219; --serious-ink:#ec835a; --crit-ink:#ee6b6b;
+  --pipe:#383835;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+button,input,select{font:inherit;color:inherit}
+h1,h2,h3{margin:0;font-weight:600}
+.wrap{max-width:980px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left));padding-right:max(16px,env(safe-area-inset-right))}
+.hidden{display:none!important}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--bg);border-bottom:1px solid var(--border);padding-top:env(safe-area-inset-top)}
+.top .wrap{display:flex;align-items:center;gap:12px;height:56px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:650;font-size:1.1rem;letter-spacing:-.01em}
+.brand svg{width:24px;height:24px}
+.clock{margin-left:auto;text-align:right;line-height:1.15}
+.clock b{font-weight:600;font-size:.98rem;white-space:nowrap}
+@media (max-width:420px){.top .wrap{gap:8px}.brand{font-size:1rem;gap:6px}.brand svg{width:22px;height:22px}.clock b{font-size:.9rem}.iconbtn{width:36px;height:36px}}
+.clock small{display:block;color:var(--muted);font-size:.75rem}
+.conn{display:flex;align-items:center;gap:6px;font-size:.78rem;color:var(--ink2)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--muted)}
+.dot.ok{background:var(--good)} .dot.bad{background:var(--crit)}
+.iconbtn{width:38px;height:38px;border-radius:10px;border:1px solid var(--border);background:var(--surface);display:grid;place-items:center;cursor:pointer}
+.iconbtn:hover{background:var(--sunken)}
+.iconbtn svg{width:18px;height:18px}
+.fsbtn{display:none}
+.fs-ok .fsbtn{display:grid}
+:root:fullscreen .top{padding-top:max(env(safe-area-inset-top),0px)}
+
+/* tabs: top on desktop, bottom on phones */
+.tabs{display:flex;gap:4px}
+.tab{appearance:none;border:0;background:none;cursor:pointer;padding:8px 14px;border-radius:10px;color:var(--ink2);font-weight:550;display:flex;align-items:center;gap:7px}
+.tab svg{width:18px;height:18px}
+.tab[aria-selected=true]{background:var(--accent-soft);color:var(--accent)}
+:root[data-theme=dark] .tab[aria-selected=true]{color:#86b6ef}
+@media (prefers-color-scheme:dark){:root:where(:not([data-theme=light])) .tab[aria-selected=true]{color:#86b6ef}}
+@media (max-width:720px){
+  .tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--surface);border-top:1px solid var(--border);padding:6px 8px calc(6px + env(safe-area-inset-bottom));justify-content:space-around}
+  .tab{flex-direction:column;gap:2px;font-size:.72rem;padding:6px 12px;flex:1}
+  .clock small{display:none}
+}
+@media (min-width:721px){.top .wrap{gap:18px}.tabs{order:2;margin-left:8px}.clock{order:3}body{padding-bottom:40px}}
+
+/* generic card */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--shadow);padding:16px}
+.card h2{font-size:1rem;margin-bottom:2px}
+.sub{color:var(--ink2);font-size:.85rem;margin:0}
+.grid{display:grid;gap:14px}
+.cols3{grid-template-columns:repeat(3,1fr)} .cols2{grid-template-columns:repeat(2,1fr)}
+@media (max-width:720px){.cols3,.cols2{grid-template-columns:1fr}}
+main{padding:16px 0;display:grid;gap:14px}
+
+/* buttons */
+.btn{appearance:none;border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:9px 14px;cursor:pointer;font-weight:550;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:40px}
+.btn:hover{background:var(--sunken)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.btn.primary:hover{filter:brightness(1.08)}
+.btn.danger{background:var(--crit);border-color:var(--crit);color:#fff}
+.btn.danger:hover{filter:brightness(1.08)}
+.btn.sm{min-height:34px;padding:5px 11px;font-size:.88rem}
+.btn svg{width:17px;height:17px}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* segmented */
+.seg{display:inline-flex;background:var(--sunken);border-radius:11px;padding:3px;gap:2px}
+.seg button{appearance:none;border:0;background:none;padding:7px 16px;border-radius:8px;cursor:pointer;font-weight:550;color:var(--ink2);min-height:34px}
+.seg button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgba(0,0,0,.14)}
+
+/* switch */
+.sw{position:relative;width:44px;height:26px;flex:none}
+.sw input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;background:var(--axis);border-radius:13px;transition:.15s}
+.sw i::after{content:"";position:absolute;left:3px;top:3px;width:20px;height:20px;border-radius:50%;background:#fff;transition:.15s;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+.sw input:checked+i{background:var(--accent)}
+.sw input:checked+i::after{transform:translateX(18px)}
+.sw input:focus-visible+i{outline:2px solid var(--accent);outline-offset:2px}
+
+/* status chips: always icon + label */
+.chip{display:inline-flex;align-items:center;gap:5px;font-size:.78rem;font-weight:600;padding:3px 9px 3px 7px;border-radius:99px;background:var(--sunken);color:var(--ink2);white-space:nowrap}
+.chip svg{width:14px;height:14px}
+.chip.good{color:var(--good-ink);background:color-mix(in srgb,var(--good) 14%,transparent)}
+.chip.warn{color:var(--warn-ink);background:color-mix(in srgb,var(--warn) 18%,transparent)}
+.chip.serious{color:var(--serious-ink);background:color-mix(in srgb,var(--serious) 16%,transparent)}
+.chip.crit{color:var(--crit-ink);background:color-mix(in srgb,var(--crit) 14%,transparent)}
+.chip.info{color:var(--accent);background:var(--accent-soft)}
+
+/* alerts */
+.alerts{display:grid;gap:8px}
+.alert{display:flex;align-items:center;gap:11px;padding:11px 14px;border-radius:12px;border:1px solid;font-weight:550}
+.alert svg{width:20px;height:20px;flex:none}
+.alert .grow{flex:1}
+.alert .sub{font-weight:400}
+#netCard input[type=number]{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:8px 10px;min-height:38px}
+.alert.serious{background:color-mix(in srgb,var(--serious) 13%,var(--surface));border-color:color-mix(in srgb,var(--serious) 45%,transparent);color:var(--ink)}
+.alert.serious svg{color:var(--serious-ink)}
+.alert.crit{background:color-mix(in srgb,var(--crit) 11%,var(--surface));border-color:color-mix(in srgb,var(--crit) 45%,transparent)}
+.alert.crit svg{color:var(--crit-ink)}
+.alert.info{background:var(--accent-soft);border-color:transparent}
+.alert.info svg{color:var(--accent)}
+
+/* hero: schematic */
+.hero{padding:0;overflow:hidden}
+.hero-head{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;justify-content:space-between;padding:14px 16px 0}
+.headline{font-size:1.15rem;font-weight:600;letter-spacing:-.01em}
+.headline small{display:block;font-size:.85rem;font-weight:450;color:var(--ink2);margin-top:1px}
+.controls{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+#sch{display:block;width:100%;max-width:640px;margin:0 auto;height:auto}
+#sch text{font:600 11px system-ui,sans-serif;fill:var(--ink2)}
+#sch .t-sm{font:500 10px system-ui,sans-serif;fill:var(--muted)}
+#sch .pipe{fill:none;stroke:var(--pipe);stroke-width:7;stroke-linecap:round;stroke-linejoin:round}
+#sch .flow{fill:none;stroke-width:7;stroke-linecap:round;stroke-linejoin:round;opacity:0;transition:opacity .25s}
+#sch .flow.on{opacity:.22}
+#sch .flow.run{opacity:.9;stroke-dasharray:2 12;animation:dash .7s linear infinite}
+@keyframes dash{to{stroke-dashoffset:-14}}
+#sch .body{fill:none;stroke:var(--steel);stroke-width:2}
+#sch .water{transition:y .8s ease,height .8s ease}
+.fillup{animation:fillup 2.4s ease-in-out infinite}
+@keyframes fillup{0%{transform:translateY(34px)}100%{transform:translateY(0)}}
+.spin{transform-box:view-box;transform-origin:108px 62px;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.wave{animation:wave 3s linear infinite}
+@keyframes wave{to{transform:translateX(-28px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+/* tank cards */
+.tank{display:flex;flex-direction:column;gap:11px}
+.tank-head{display:flex;align-items:center;gap:9px}
+.swatch{width:12px;height:12px;border-radius:4px;flex:none}
+.tank-head h2{flex:1;font-size:1rem}
+.facts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.fact{background:var(--sunken);border-radius:10px;padding:8px 10px}
+.fact b{display:block;font-size:1.05rem;font-weight:600}
+.fact span{font-size:.75rem;color:var(--ink2)}
+.row{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.row.tight{gap:8px}
+label.row{cursor:pointer}
+
+/* pump ring */
+.ringwrap{display:flex;align-items:center;gap:16px}
+.ringwrap .chip{justify-self:start;width:fit-content}
+.ring{width:96px;height:96px;flex:none}
+.ring circle{fill:none;stroke-width:9}
+.ring .track{stroke:var(--sunken)}
+.ring .val{stroke:var(--pump);stroke-linecap:round;transition:stroke-dashoffset .9s linear}
+.ring text{font:650 17px system-ui,sans-serif;fill:var(--ink);text-anchor:middle}
+.ring text.u{font:500 10px system-ui,sans-serif;fill:var(--muted)}
+.bignum{font-size:1.9rem;font-weight:650;letter-spacing:-.02em;line-height:1.1}
+
+/* trends */
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:.85rem;color:var(--ink2);margin:6px 0 2px}
+.legend i{display:inline-block;width:11px;height:11px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.chart{position:relative;width:100%}
+.chart svg{display:block;width:100%;height:auto;overflow:visible}
+.chart text{font:500 11px system-ui,sans-serif;fill:var(--muted)}
+.chart .lbl{fill:var(--ink2);font-weight:600}
+.gl{stroke:var(--grid);stroke-width:1}
+.ax{stroke:var(--axis);stroke-width:1}
+.hit{fill:transparent;cursor:default}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--ink);color:var(--bg);padding:7px 10px;border-radius:9px;font-size:.8rem;line-height:1.35;max-width:260px;box-shadow:0 4px 16px rgba(0,0,0,.25);opacity:0;transition:opacity .08s}
+#tip b{font-weight:650}
+table.data{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:10px}
+table.data th,table.data td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--grid)}
+table.data th{color:var(--ink2);font-weight:600;position:sticky;top:0;background:var(--surface)}
+table.data td.n{text-align:right;font-variant-numeric:tabular-nums}
+.scroll{max-height:320px;overflow:auto}
+.evt{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--grid);font-size:.9rem}
+.evt:last-child{border:0}
+.evt svg{width:18px;height:18px;flex:none;margin-top:1px;color:var(--muted)}
+.evt small{display:block;color:var(--muted);font-size:.76rem}
+.evt.crit svg{color:var(--crit-ink)} .evt.serious svg{color:var(--serious-ink)} .evt.good svg{color:var(--good-ink)}
+
+/* settings */
+.sec{display:grid;gap:0}
+.sec h2{margin-bottom:6px}
+.field{display:grid;grid-template-columns:1fr auto;gap:4px 16px;align-items:center;padding:12px 0;border-top:1px solid var(--grid)}
+.field:first-of-type{border-top:0}
+.field .nm{font-weight:550}
+.field .help{grid-column:1;color:var(--ink2);font-size:.82rem;margin-top:-2px}
+.field .ctl{grid-row:1;grid-column:2;display:flex;align-items:center;gap:8px;justify-content:flex-end}
+.field.changed .nm::after{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--accent);margin-left:8px;vertical-align:middle}
+@media (max-width:560px){.field{grid-template-columns:1fr}.field .ctl{grid-row:auto;grid-column:1;justify-content:flex-start}}
+.stepper{display:inline-flex;align-items:center;border:1px solid var(--border);border-radius:10px;overflow:hidden;background:var(--surface)}
+.stepper button{appearance:none;border:0;background:var(--sunken);width:38px;height:38px;cursor:pointer;font-size:1.1rem;color:var(--ink)}
+.stepper button:hover{background:var(--grid)}
+.stepper input{width:76px;border:0;text-align:center;background:transparent;height:38px;-moz-appearance:textfield;font-variant-numeric:tabular-nums}
+.stepper input::-webkit-inner-spin-button{display:none}
+.unit{color:var(--ink2);font-size:.85rem;min-width:2.2em}
+select,input[type=time],input[type=text],input[type=password]{border:1px solid var(--border);background:var(--surface);border-radius:10px;padding:8px 10px;min-height:38px}
+.savebar{position:sticky;bottom:calc(68px + env(safe-area-inset-bottom));z-index:15;display:flex;gap:10px;align-items:center;justify-content:space-between;
+  background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:10px 14px;box-shadow:0 6px 24px rgba(0,0,0,.14)}
+@media (min-width:721px){.savebar{bottom:16px}}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:6px 18px;font-size:.9rem}
+.kv dt{color:var(--ink2)} .kv dd{margin:0;font-variant-numeric:tabular-nums;text-align:right;word-break:break-all}
+.io{display:grid;grid-template-columns:auto 1fr auto;gap:8px 12px;align-items:center;font-size:.9rem}
+.io .tag{font:600 .75rem ui-monospace,Menlo,monospace;color:var(--muted)}
+pre.log{margin:0;max-height:260px;overflow:auto;background:var(--sunken);border-radius:10px;padding:10px 12px;font:12px/1.5 ui-monospace,Menlo,monospace;white-space:pre-wrap;color:var(--ink2)}
+.bar{height:8px;background:var(--sunken);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+dialog{border:1px solid var(--border);border-radius:16px;background:var(--surface);color:var(--ink);padding:20px;max-width:340px;width:calc(100% - 32px)}
+dialog::backdrop{background:rgba(0,0,0,.45)}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(20px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-weight:550;opacity:0;transition:.2s;z-index:60;pointer-events:none}
+.toast.show{opacity:1;transform:translateX(-50%)}
+.pad-top{padding-top:4px}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 2.5S5 10.2 5 15a7 7 0 0014 0c0-4.8-7-12.5-7-12.5z" fill="currentColor"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M5 12.5l4.5 4.5L19 7.5" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M12 3.5L2.5 20h19L12 3.5z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M12 10v5M12 17.6v.1" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3" fill="currentColor"/></symbol>
+  <symbol id="i-play" viewBox="0 0 24 24"><path d="M7 4.8v14.4a.8.8 0 001.2.7l11.3-7.2a.8.8 0 000-1.4L8.2 4.1A.8.8 0 007 4.8z" fill="currentColor"/></symbol>
+  <symbol id="i-pause" viewBox="0 0 24 24"><rect x="6" y="5" width="4" height="14" rx="1.4" fill="currentColor"/><rect x="14" y="5" width="4" height="14" rx="1.4" fill="currentColor"/></symbol>
+  <symbol id="i-off" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M6.5 17.5l11-11" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 11v6M12 7.4v.1" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8.5a.5.5 0 01-.5.5H15v-6H9v6H4.5a.5.5 0 01-.5-.5V11z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></symbol>
+  <symbol id="i-chart" viewBox="0 0 24 24"><path d="M4 19.5V5M4 19.5h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M8 15l3.5-4 3 2.5L19 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-sliders" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="7" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="9" cy="17" r="2.2" fill="none" stroke="currentColor" stroke-width="2"/></symbol>
+  <symbol id="i-chip" viewBox="0 0 24 24"><rect x="7" y="7" width="10" height="10" rx="2" fill="none" stroke="currentColor" stroke-width="2"/><path d="M10 3.5v3M14 3.5v3M10 17.5v3M14 17.5v3M3.5 10h3M3.5 14h3M17.5 10h3M17.5 14h3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-theme" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 4a8 8 0 000 16z" fill="currentColor"/></symbol>
+  <symbol id="i-bolt" viewBox="0 0 24 24"><path d="M13 2.5L5 13.5h6l-1 8 8-11h-6l1-8z" fill="currentColor"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 7v5.5l3.5 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+  <symbol id="i-expand" viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-compress" viewBox="0 0 24 24"><path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/><path d="M12 3v2.5M12 18.5V21M3 12h2.5M18.5 12H21M5.6 5.6l1.8 1.8M16.6 16.6l1.8 1.8M5.6 18.4l1.8-1.8M16.6 7.4l1.8-1.8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></symbol>
+</svg>
+
+<header class="top">
+  <div class="wrap">
+    <div class="brand"><svg style="color:var(--t0)"><use href="#i-drop"/></svg>WaterFill</div>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button class="tab" role="tab" data-tab="dash" aria-selected="true"><svg><use href="#i-home"/></svg>Dashboard</button>
+      <button class="tab" role="tab" data-tab="trends" aria-selected="false"><svg><use href="#i-chart"/></svg>Trends</button>
+      <button class="tab" role="tab" data-tab="set" aria-selected="false"><svg><use href="#i-sliders"/></svg>Setpoints</button>
+      <button class="tab" role="tab" data-tab="sys" aria-selected="false"><svg><use href="#i-chip"/></svg>System</button>
+    </nav>
+    <div class="clock"><b id="clk">--:--</b><small id="clkd"></small></div>
+    <div class="conn" title="Live connection"><span class="dot" id="conn"></span><span id="connt" class="hidden"></span></div>
+    <button class="iconbtn fsbtn" id="fsBtn" aria-label="Full screen" aria-pressed="false" title="Full screen"><svg><use href="#i-expand"/></svg></button>
+    <button class="iconbtn" id="themeBtn" aria-label="Change theme" title="Theme: auto"><svg><use href="#i-theme"/></svg></button>
+  </div>
+</header>
+
+<div class="wrap">
+<main>
+
+<!-- ============ DASHBOARD ============ -->
+<section id="p-dash" class="grid">
+  <div class="alerts" id="alerts" role="status" aria-live="polite"></div>
+
+  <div class="card hero">
+    <div class="hero-head">
+      <div class="headline"><span id="head">Connecting…</span><small id="headsub"></small></div>
+      <div class="controls">
+        <div class="seg" role="group" aria-label="Mode">
+          <button id="mAuto" aria-pressed="false">Auto</button>
+          <button id="mMan" aria-pressed="false">Manual</button>
+        </div>
+        <button class="btn danger" id="stopBtn" title="Stops the pump and valves and switches to Manual"><svg><use href="#i-stop"/></svg>Stop</button>
+      </div>
+    </div>
+    <svg id="sch" viewBox="0 0 400 290" role="img" aria-label="Plumbing diagram"></svg>
+  </div>
+
+  <div class="grid cols3" id="tanks"></div>
+
+  <div class="grid cols2">
+    <div class="card">
+      <h2>Pump</h2>
+      <p class="sub" id="pumpSub">—</p>
+      <div class="ringwrap pad-top">
+        <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="track" cx="50" cy="50" r="42"/>
+          <circle class="val" id="ringVal" cx="50" cy="50" r="42" transform="rotate(-90 50 50)" stroke-dasharray="263.9" stroke-dashoffset="263.9"/>
+          <text id="ringTxt" x="50" y="53">0</text><text class="u" x="50" y="68" id="ringU">s</text>
+        </svg>
+        <div>
+          <div class="chip" id="pumpChip"><svg><use href="#i-pause"/></svg>Off</div>
+          <div class="kv" style="margin-top:10px">
+            <dt>Pumped today</dt><dd id="pToday">—</dd>
+            <dt>Continuous run</dt><dd id="pStint">—</dd>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <h2>Ozone</h2>
+      <p class="sub" id="ozSub">—</p>
+      <div class="ringwrap pad-top">
+        <svg class="ring" viewBox="0 0 100 100" aria-hidden="true">
+          <circle class="track" cx="50" cy="50" r="42"/>
+          <circle class="val" id="ozVal" cx="50" cy="50" r="42" transform="rotate(-90 50 50)" stroke-dasharray="263.9" stroke-dashoffset="263.9" style="stroke:var(--oz)"/>
+          <text id="ozTxt" x="50" y="53">0</text><text class="u" x="50" y="68">s left</text>
+        </svg>
+        <div style="display:grid;gap:10px">
+          <div class="chip" id="ozChip"><svg><use href="#i-pause"/></svg>Off</div>
+          <div class="row tight"><button class="btn primary sm" id="ozRun"><svg><use href="#i-play"/></svg>Run now</button>
+          <button class="btn sm hidden" id="ozStop"><svg><use href="#i-stop"/></svg>Cancel</button></div>
+          <span class="sub" id="ozHint">Also starts from the front-panel button.</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ TRENDS ============ -->
+<section id="p-trends" class="grid hidden">
+  <div class="row" style="flex-wrap:wrap">
+    <div class="seg" role="group" aria-label="Range" id="rangeSeg">
+      <button data-r="1" aria-pressed="true">24 h</button>
+      <button data-r="7" aria-pressed="false">7 days</button>
+      <button data-r="30" aria-pressed="false">30 days</button>
+      <button data-r="90" aria-pressed="false">90 days</button>
+    </div>
+    <button class="btn sm" id="csvBtn">Download events (CSV)</button>
+  </div>
+  <div class="card">
+    <div class="row"><div><h2>Activity timeline</h2><p class="sub" id="tlSub">When each tank was filled</p></div>
+      <button class="btn sm tblbtn" data-for="tl">Table</button></div>
+    <div class="legend" id="tlLegend"></div>
+    <div class="chart" id="tl"></div>
+    <div class="hidden" id="tlTbl"></div>
+  </div>
+  <div class="card">
+    <div class="row"><div><h2>Fills per day</h2><p class="sub">Completed fills, by tank</p></div>
+      <button class="btn sm tblbtn" data-for="fd">Table</button></div>
+    <div class="legend" id="fdLegend"></div>
+    <div class="chart" id="fd"></div>
+    <div class="hidden" id="fdTbl"></div>
+  </div>
+  <div class="card">
+    <div class="row"><div><h2>Pump run time per day</h2><p class="sub">Total minutes the pump ran</p></div>
+      <button class="btn sm tblbtn" data-for="pd">Table</button></div>
+    <div class="chart" id="pd"></div>
+    <div class="hidden" id="pdTbl"></div>
+  </div>
+  <div class="card">
+    <h2>Recent events</h2>
+    <div class="scroll" id="evlist" style="margin-top:6px"></div>
+  </div>
+</section>
+
+<!-- ============ SETPOINTS ============ -->
+<section id="p-set" class="grid hidden">
+  <div id="setForm" class="grid"></div>
+  <div class="savebar hidden" id="saveBar">
+    <span id="saveMsg" class="sub">You have unsaved changes</span>
+    <span class="row tight"><button class="btn" id="discardBtn">Discard</button><button class="btn primary" id="saveBtn">Save changes</button></span>
+  </div>
+</section>
+
+<!-- ============ SYSTEM ============ -->
+<section id="p-sys" class="grid hidden">
+  <div class="grid cols2">
+    <div class="card"><h2>Inputs</h2><p class="sub">Live state of the screw terminals</p>
+      <div class="io" id="ioIn" style="margin-top:10px"></div></div>
+    <div class="card"><h2>Relay outputs</h2><p class="sub">What the controller is driving</p>
+      <div class="io" id="ioOut" style="margin-top:10px"></div></div>
+  </div>
+  <div class="grid cols2">
+    <div class="card"><h2>Controller</h2>
+      <dl class="kv" id="kv" style="margin-top:10px"></dl></div>
+    <div class="card"><h2>Firmware update</h2>
+      <p class="sub">Upload a compiled <code>.bin</code>. Outputs are held off while it writes, and the controller restarts itself.</p>
+      <div class="row" style="margin-top:12px;flex-wrap:wrap"><input type="file" id="fw" accept=".bin"><button class="btn primary sm" id="fwBtn">Upload</button></div>
+      <div class="bar hidden" id="fwBar"><i></i></div><p class="sub" id="fwMsg" style="margin-top:8px"></p>
+    </div>
+  </div>
+  <div class="card"><h2>Lifetime totals</h2><p class="sub">Kept in flash; survive restarts and updates</p>
+    <dl class="kv" id="lifeKv" style="margin-top:10px"></dl></div>
+  <div class="card"><div class="row"><h2>Log</h2><span class="sub">Latest controller messages</span></div>
+    <pre class="log" id="log" style="margin-top:10px">…</pre></div>
+</section>
+
+</main>
+</div>
+
+<div id="tip"></div>
+<div class="toast" id="toast"></div>
+<dialog id="pinDlg"><form method="dialog" id="pinForm">
+  <h2>PIN required</h2><p class="sub" style="margin:6px 0 14px">Enter the PIN to change settings or control the machine.</p>
+  <input type="password" id="pinIn" inputmode="numeric" autocomplete="off" style="width:100%" aria-label="PIN">
+  <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn" value="cancel">Cancel</button><button class="btn primary" value="ok">OK</button></div>
+</form></dialog>
+
+<script>
+"use strict";
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const TN=[{n:"CPAP",s:"CPAP"},{n:"Brian's Dock Pro",s:"Brian"},{n:"Dina's Dock Pro",s:"Dina"}];
+const TCOL=["var(--t0)","var(--t1)","var(--t2)"];
+let S=null, CFG=null, DRAFT=null, HIST=null, tab="dash", range=1, lastMsg=0, es=null;
+const ic=(n,c="")=>`<svg class="${c}"><use href="#i-${n}"/></svg>`;
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const pad=n=>String(n).padStart(2,"0");
+
+/* ---------- networking ---------- */
+function askPin(){return new Promise(res=>{const d=$("#pinDlg");$("#pinIn").value="";d.onclose=()=>res(d.returnValue==="ok"?$("#pinIn").value:null);d.showModal();$("#pinIn").focus();});}
+async function api(path,opt={},retry=true){
+  const h={"Content-Type":"application/json"};const pin=localStorage.getItem("wfpin");if(pin)h["X-Pin"]=pin;
+  const r=await fetch(path,{...opt,headers:h});
+  if(r.status===401&&retry){const p=await askPin();if(p!==null){localStorage.setItem("wfpin",p);return api(path,opt,false);}throw new Error("PIN required");}
+  if(r.status===401){localStorage.removeItem("wfpin");throw new Error("Wrong PIN");}
+  if(!r.ok)throw new Error("Request failed ("+r.status+")");
+  const t=await r.text();try{return JSON.parse(t)}catch{return t}
+}
+const cmd=(c,x={})=>api("/api/cmd",{method:"POST",body:JSON.stringify({c,...x})}).then(()=>setTimeout(pollState,250)).catch(e=>toast(e.message));
+function toast(m){const t=$("#toast");t.textContent=m;t.classList.add("show");clearTimeout(toast.t);toast.t=setTimeout(()=>t.classList.remove("show"),2600);}
+function setConn(ok){$("#conn").className="dot "+(ok?"ok":"bad");$("#connt").textContent=ok?"":"Offline";$("#connt").classList.toggle("hidden",ok);}
+function connect(){
+  try{es=new EventSource("/stream");}catch{return;}
+  es.addEventListener("state",e=>{S=JSON.parse(e.data);lastMsg=Date.now();setConn(true);render();});
+  es.onerror=()=>setConn(false);
+}
+async function pollState(){try{S=await (await fetch("/api/state")).json();lastMsg=Date.now();setConn(true);render();}catch{setConn(false);}}
+setInterval(()=>{if(Date.now()-lastMsg>4000)pollState();},2000);
+
+/* ---------- helpers ---------- */
+function fmtDur(s){s=Math.round(s);if(s<60)return s+" s";const m=Math.floor(s/60);if(m<60)return m+" min "+(s%60?pad(s%60)+" s":"").trim();return Math.floor(m/60)+" h "+(m%60)+" min";}
+function ago(t){if(!t)return "never";if(!S||!S.t)return "—";const d=S.t-t;if(d<90)return "just now";if(d<3600)return Math.round(d/60)+" min ago";if(d<86400)return Math.round(d/3600)+" h ago";const n=Math.round(d/86400);return n+(n===1?" day ago":" days ago");}
+function fmtT(t){return new Date(t*1000).toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});}
+function fmtDT(t){const d=new Date(t*1000);return d.toLocaleDateString([],{month:"short",day:"numeric"})+", "+fmtT(t);}
+function dayDate(day){return new Date(day*86400000);}
+function fmtDay(day){return dayDate(day).toLocaleDateString([],{weekday:"short",month:"short",day:"numeric",timeZone:"UTC"});}
+
+/* ---------- state description ---------- */
+function describe(){
+  const s=S;if(!s)return ["Connecting…",""];
+  const t=s.tg>=0?TN[s.tg].n:"";
+  if(s.io)return ["Input/output fault","The I/O expander is not responding. Everything is held off."];
+  if(s.st==="ozone")return ["Ozone running",fmtDur(s.ozRem)+" remaining"];
+  if(s.st==="opening")return ["Opening valve for "+t,"The pump starts in a moment"];
+  if(s.st==="filling"){
+    if(s.wait===1)return ["Filling "+t+" — waiting for supply","Supply tank is empty; the pump is paused"];
+    if(s.out.pump)return ["Filling "+t,"Pump running "+s.fillPump+" s"+(s.man?" · manual run, "+fmtDur(s.manRem)+" left":"")];
+    return ["Filling "+t+" — pump resting","Cooling down, "+s.cool+" s to go"];
+  }
+  if(s.st==="stopping")return ["Stopping…","Pump off, releasing valves"];
+  if(!s.mode||s.mode==="manual")return ["Manual mode","Nothing runs until you start it"];
+  if(s.wait===1||s.sup.empty)return ["Waiting for water","Supply tank is empty"];
+  if(s.wait===2)return ["Waiting for the fill window","A tank needs water, but it is outside the allowed hours"];
+  if(s.tanks.some(x=>x.n&&x.e&&!x.f))return ["Starting a fill…","A tank needs water"];
+  return ["All tanks are full","Watching the level switches"];
+}
+function tankState(i){
+  const s=S,t=s.tanks[i];
+  if(t.f)return{k:"crit",l:"Fault",i:"alert"};
+  if(!t.e)return{k:"",l:"Not monitored",i:"off"};
+  if(s.tg===i&&(s.st==="opening"||s.st==="filling"))return s.out.pump?{k:"info",l:"Filling",i:"drop"}:{k:"info",l:"Filling · resting",i:"pause"};
+  if(t.n)return{k:"warn",l:"Needs water",i:"alert"};
+  return{k:"good",l:"Full",i:"check"};
+}
+
+/* ---------- schematic ---------- */
+const XS=[160,240,320];
+function buildSchematic(){
+  const tank=(cx,i)=>`<g id="tk${i}"><clipPath id="cp${i}"><rect x="${cx-31}" y="159" width="62" height="82" rx="8"/></clipPath>
+    <g clip-path="url(#cp${i})"><rect class="bg" x="${cx-31}" y="159" width="62" height="82" fill="var(--sunken)"/>
+      <g id="wt${i}"><rect id="wr${i}" x="${cx-40}" y="196" width="80" height="60" fill="${TCOL[i]}" opacity=".55"/>
+      <path class="wave" id="wv${i}" d="M${cx-70} 196 q7 -5 14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0 t14 0" fill="none" stroke="${TCOL[i]}" stroke-width="2.5"/></g></g>
+    <rect class="body" id="bd${i}" x="${cx-31}" y="159" width="62" height="82" rx="8" fill="none"/>
+    <text x="${cx}" y="258" text-anchor="middle">${TN[i].s}</text><text class="t-sm" id="ts${i}" x="${cx}" y="272" text-anchor="middle"></text></g>`;
+  const valve=(cx,lbl)=>`<g><rect x="${cx-15}" y="47" width="30" height="30" rx="7" fill="var(--surface)" stroke="var(--steel)" stroke-width="2"/>
+    <path id="vg${lbl}" d="M${cx-7} 62 h14" stroke="var(--steel)" stroke-width="3" stroke-linecap="round"/>
+    <text x="${cx}" y="36" text-anchor="middle">V${lbl}</text><text class="t-sm" id="vt${lbl}" x="${cx}" y="92" text-anchor="middle"></text></g>`;
+  const paths=[
+    ["pA","M66 62 H100"],["pB","M116 62 H160"],["pC","M160 62 H240"],["pD","M240 62 H320 V150"],
+    ["d1","M160 62 V150"],["d2","M240 62 V150"]];
+  $("#sch").innerHTML=`
+   ${paths.map(([id,d])=>`<path class="pipe" d="${d}"/>`).join("")}
+   ${paths.map(([id,d])=>`<path class="flow" id="${id}" d="${d}"/>`).join("")}
+   <g id="sup"><clipPath id="cps"><rect x="8" y="26" width="58" height="76" rx="8"/></clipPath>
+     <g clip-path="url(#cps)"><rect x="8" y="26" width="58" height="76" fill="var(--sunken)"/><rect id="swr" x="8" y="60" width="58" height="50" fill="var(--t0)" opacity=".4"/></g>
+     <rect class="body" id="sbd" x="8" y="26" width="58" height="76" rx="8" fill="none"/>
+     <text x="37" y="18" text-anchor="middle">SUPPLY</text><text class="t-sm" id="sts" x="37" y="116" text-anchor="middle"></text></g>
+   <g><circle cx="108" cy="62" r="17" fill="var(--surface)" stroke="var(--steel)" stroke-width="2"/>
+     <g id="imp" style="color:var(--pump)"><path d="M108 62 L108 50 M108 62 L118.4 68 M108 62 L97.6 68" stroke="currentColor" stroke-width="3" stroke-linecap="round" fill="none"/><circle cx="108" cy="62" r="2.6" fill="currentColor"/></g>
+     <text x="108" y="36" text-anchor="middle">PUMP</text><text class="t-sm" id="pmt" x="108" y="92" text-anchor="middle"></text></g>
+   ${valve(160,1)}${valve(240,2)}
+   ${tank(160,0)}${tank(240,1)}${tank(320,2)}
+   <g id="ozg"><rect x="352" y="14" width="40" height="30" rx="8" fill="var(--surface)" stroke="var(--steel)" stroke-width="2" id="ozbx"/>
+     <text x="372" y="33" text-anchor="middle" id="ozt">O₃</text><text class="t-sm" x="372" y="58" text-anchor="middle" id="ozs"></text></g>
+   <text class="t-sm" x="200" y="127" text-anchor="middle" id="route"></text>`;
+}
+function updateSchematic(){
+  const s=S;if(!s)return;
+  const tg=s.tg, pumping=s.out.pump;
+  const route=[[],["pA","pB","d1"],["pA","pB","pC","d2"],["pA","pB","pC","pD"]];
+  const act=tg>=0&&(s.st==="opening"||s.st==="filling"||s.st==="stopping")?["pA","pB",...(tg===0?["d1"]:tg===1?["pC","d2"]:["pC","pD"])]:[];
+  ["pA","pB","pC","pD","d1","d2"].forEach(id=>{const e=$("#"+id);const on=act.includes(id);
+    e.classList.toggle("on",on&&!pumping);e.classList.toggle("run",on&&pumping);
+    e.style.stroke=tg>=0?TCOL[tg]:"none";});
+  $("#imp").classList.toggle("spin",pumping);
+  $("#pmt").textContent=pumping?"running":(s.cool>0?"resting "+s.cool+"s":"off");
+  $("#vg1").setAttribute("d",s.out.v1?"M160 55 V69":"M153 62 h14");$("#vt1").textContent=s.out.v1?"→ CPAP":"→ V2";
+  $("#vg2").setAttribute("d",s.out.v2?"M240 55 V69":"M233 62 h14");$("#vt2").textContent=s.out.v2?"→ Brian":"→ Dina";
+  for(let i=0;i<3;i++){
+    const ts=tankState(i),y0=159,h=82,filling=tg===i&&(s.st==="opening"||s.st==="filling");
+    const lvl=ts.k==="good"?0.84:(!s.tanks[i].e?0.5:0.3);
+    const wr=$("#wr"+i),wv=$("#wv"+i),wt=$("#wt"+i);
+    const y=y0+h*(1-lvl);wr.setAttribute("y",y);wv.setAttribute("transform","translate(0 "+(y-196)+")");
+    wt.classList.toggle("fillup",filling&&pumping);
+    $("#wt"+i).style.opacity=s.tanks[i].e?1:.25;
+    const bd=$("#bd"+i);bd.style.stroke=ts.k==="crit"?"var(--crit)":(ts.k==="warn"?"var(--warn)":"var(--steel)");
+    bd.style.strokeDasharray=s.tanks[i].e?"none":"5 4";bd.style.strokeWidth=ts.k==="crit"||ts.k==="warn"?3:2;
+    $("#ts"+i).textContent=ts.l==="Filling · resting"?"Filling":ts.l;
+  }
+  const empty=s.sup.empty;$("#swr").setAttribute("y",empty?92:58);$("#swr").style.fill=empty?"var(--serious)":"var(--t0)";
+  $("#sbd").style.stroke=empty?"var(--serious)":"var(--steel)";$("#sbd").style.strokeWidth=empty?3:2;
+  $("#sts").textContent=!s.sup.en?"not monitored":(empty?"EMPTY":"OK");
+  const oz=s.out.oz;$("#ozbx").style.stroke=oz?"var(--t2)":"var(--steel)";$("#ozbx").style.fill=oz?"color-mix(in srgb,var(--t2) 20%,var(--surface))":"var(--surface)";
+  $("#ozs").textContent=oz?s.ozRem+"s":"";
+}
+
+/* ---------- dashboard ---------- */
+function buildTanks(){
+  $("#tanks").innerHTML=TN.map((t,i)=>`<div class="card tank" id="tc${i}">
+    <div class="tank-head"><span class="swatch" style="background:${TCOL[i]}"></span><h2>${esc(t.n)}</h2>
+      <span class="chip" id="tchip${i}"></span></div>
+    <div class="facts"><div class="fact"><b id="tl${i}">—</b><span>Last filled</span></div>
+      <div class="fact"><b id="tf${i}">—</b><span>Fills today</span></div></div>
+    <label class="row"><span>Include in auto fill<br><span class="sub" id="tsub${i}"></span></span>
+      <span class="sw"><input type="checkbox" id="ten${i}" aria-label="Include ${esc(t.n)} in auto fill"><i></i></span></label>
+    <div class="row tight" id="tact${i}"></div></div>`).join("");
+  TN.forEach((t,i)=>{$("#ten"+i).addEventListener("change",e=>{
+    const arr=[{},{},{}];arr[i]={en:e.target.checked};
+    api("/api/config",{method:"POST",body:JSON.stringify({tanks:arr})}).then(()=>{toast(t.s+(e.target.checked?" enabled":" disabled"));loadCfg();}).catch(x=>{toast(x.message);pollState();});});});
+}
+function renderDash(){
+  const s=S;if(!s)return;
+  const [h,sub]=describe();$("#head").textContent=h;$("#headsub").textContent=sub;
+  $("#mAuto").setAttribute("aria-pressed",s.mode==="auto");$("#mMan").setAttribute("aria-pressed",s.mode==="manual");
+  // alerts
+  const A=[];
+  if(S.io)A.push(["crit","alert","Input/output fault","The I/O expander is not responding. Pump and valves are held off."]);
+  s.tanks.forEach((t,i)=>{if(t.f)A.push(["crit","alert",TN[i].n+" fill fault","The pump ran its full limit and the tank never reported full. Check the switch, hose and valves, then clear the fault.",i]);});
+  if(s.sup.empty&&s.sup.en)A.push(["serious","alert","Supply tank is empty","The pump is blocked until the supply refills."]);
+  if(s.wait===2)A.push(["info","clock","Outside the fill window","A tank needs water; filling resumes at the scheduled time."]);
+  if(s.net&&s.net.ap)A.push(["serious","alert","Wi-Fi not connected","The controller can't join its saved network, so it is running its own access point ("+s.net.apSsid+"). Filling is not affected. Fix the network under Setpoints → Network."]);
+  if(!s.tv)A.push(["info","info","Clock not set","Waiting for network time. Timestamps and the fill window need it."]);
+  $("#alerts").innerHTML=A.map(a=>`<div class="alert ${a[0]}">${ic(a[1])}<div class="grow"><b>${esc(a[2])}</b><div class="sub">${esc(a[3])}</div></div>${a[4]!==undefined?`<button class="btn sm" data-clear="${a[4]}">Clear fault</button>`:""}</div>`).join("");
+  $$("[data-clear]").forEach(b=>b.onclick=()=>cmd("clear",{t:+b.dataset.clear}));
+  // tank cards
+  for(let i=0;i<3;i++){
+    const ts=tankState(i),t=s.tanks[i];
+    $("#tchip"+i).className="chip "+ts.k;$("#tchip"+i).innerHTML=ic(ts.i)+esc(ts.l);
+    $("#tl"+i).textContent=ago(t.l);$("#tf"+i).textContent=s.today.fills[i];
+    const en=$("#ten"+i);if(document.activeElement!==en)en.checked=t.e;
+    $("#tsub"+i).textContent=t.e?"Level switch is watched":"Never checked or filled";
+    const manual=s.mode==="manual",runningThis=s.tg===i&&s.man&&(s.st==="opening"||s.st==="filling"||s.st==="stopping");
+    $("#tact"+i).innerHTML=manual?(runningThis?`<button class="btn sm danger" data-stopone>${ic("stop")}Stop</button><span class="sub">${fmtDur(s.manRem)} left</span>`:`<button class="btn sm primary" data-run="${i}" ${s.io?"disabled":""}>${ic("play")}Run pump</button>`):"";
+  }
+  $$("[data-run]").forEach(b=>b.onclick=()=>cmd("run",{t:+b.dataset.run}));
+  $$("[data-stopone]").forEach(b=>b.onclick=()=>cmd("stop"));
+  // pump
+  const p=s.out.pump,lim=(CFG?CFG.pump.on:10);
+  $("#pumpChip").className="chip "+(p?"info":(s.cool>0?"warn":""));
+  $("#pumpChip").innerHTML=p?ic("drop")+"Running":(s.cool>0?ic("pause")+"Resting":ic("pause")+"Off");
+  $("#pumpSub").textContent=p?"Runs up to "+lim+" s at a time, then rests":(s.cool>0?"Cooling down before the next run":"Stopped");
+  const frac=p?Math.min(1,s.stint/lim):(s.cool>0&&CFG?Math.min(1,s.cool/Math.max(1,CFG.pump.off)):0);
+  $("#ringVal").setAttribute("stroke-dashoffset",(263.9*(1-frac)).toFixed(1));
+  $("#ringTxt").textContent=p?s.stint:(s.cool>0?s.cool:0);$("#ringU").textContent=p?"s running":(s.cool>0?"s resting":"idle");
+  $("#pToday").textContent=fmtDur(s.today.pump);$("#pStint").textContent=p?s.stint+" s":"—";
+  // ozone
+  const oz=s.out.oz;$("#ozChip").className="chip "+(oz?"good":(s.ozp?"info":""));
+  $("#ozChip").innerHTML=oz?ic("bolt")+"Running":(s.ozp?ic("clock")+"Queued":ic("pause")+"Off");
+  $("#ozSub").textContent=oz?"Generator on":"Runs "+(CFG?CFG.ozone.run:60)+" s per cycle";
+  const runLen=CFG?CFG.ozone.run:60;$("#ozVal").setAttribute("stroke-dashoffset",(263.9*(1-(oz?s.ozRem/runLen:0))).toFixed(1));$("#ozTxt").textContent=oz?s.ozRem:0;
+  $("#ozRun").classList.toggle("hidden",oz||s.ozp);$("#ozStop").classList.toggle("hidden",!(oz||s.ozp));
+  $("#ozRun").disabled=s.io||(CFG&&!CFG.ozone.en);
+  $("#ozHint").textContent=CFG&&!CFG.ozone.en?"Disabled in Setpoints.":(s.ozp?"Starts when the pump is idle.":"Also starts from the front-panel button.");
+  updateSchematic();
+}
+
+/* ---------- header / system ---------- */
+function renderHead(){
+  const d=S&&S.t?new Date(S.t*1000):new Date();
+  $("#clk").textContent=d.toLocaleTimeString([],{hour:"numeric",minute:"2-digit"});
+  $("#clkd").textContent=d.toLocaleDateString([],{weekday:"short",month:"short",day:"numeric"});
+}
+const DI_NAMES=["DI0 · spare","DI1 · ozone button","DI2 · supply tank switch","DI3 · CPAP switch","DI4 · Brian's switch","DI5 · Dina's switch"];
+const DO_NAMES=["DO0 · pump","DO1 · valve V1 (CPAP)","DO2 · valve V2 (Brian)","DO3 · unused","DO4 · ozone","DO5 · spare"];
+function interpret(i,act){
+  if(!CFG)return "";
+  if(i===2)return CFG.supply.en?((act!==CFG.supply.inv)?"supply EMPTY":"supply OK"):"not used";
+  if(i>=3){const inv=CFG.tanks[i-3].inv;return (act!==inv)?"needs water":"full";}
+  return i===1?(act?"pressed":""):"";
+}
+function renderSys(){
+  const s=S;if(!s)return;
+  $("#ioIn").innerHTML=DI_NAMES.map((n,i)=>{const act=!(s.di&(1<<i));
+    return `<span class="tag">IN</span><span>${n}<br><span class="sub">${interpret(i,act)}</span></span><span class="chip ${act?"info":""}">${act?"Active (LOW)":"Open"}</span>`;}).join("");
+  $("#ioOut").innerHTML=DO_NAMES.map((n,i)=>{const on=!(s.do&(1<<i));
+    return `<span class="tag">OUT</span><span>${n}</span><span class="chip ${on?"good":""}">${on?ic("bolt")+"ON":"Off"}</span>`;}).join("");
+  const r=s.sys.rssi,q=r>-55?"excellent":r>-67?"good":r>-75?"fair":"weak";
+  if(s.life)$("#lifeKv").innerHTML=[["Pump run time",(s.life.pump/3600).toFixed(1)+" h"],["Pump starts",s.life.cycles.toLocaleString()],["Ozone run time",(s.life.oz/3600).toFixed(1)+" h"],
+    ...TN.map((t,i)=>["Fills · "+t.s,s.life.fills[i].toLocaleString()]),["Fill faults",s.life.faults]].map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+  $("#kv").innerHTML=[["Firmware",s.sys.fw],["Uptime",fmtDur(s.up)],["Last restart",s.sys.rst],["Address",s.sys.ip],["Wi-Fi signal",r+" dBm ("+q+")"],["Free memory",(s.sys.heap/1024).toFixed(0)+" KB"],["MAC",s.sys.mac],["Clock",s.tv?"set":"not set"],["Home Assistant (MQTT)",s.mqtt?(s.mqtt.en?(s.mqtt.ok?"connected":"not connected"):"off"):"—"],["Wi-Fi mode",s.net&&s.net.ap?"fallback access point":"station"]]
+    .map(([k,v])=>`<dt>${k}</dt><dd>${esc(v)}</dd>`).join("");
+}
+async function refreshLog(){if(tab!=="sys")return;try{const t=await (await fetch("/api/log")).text();const el=$("#log");const bottom=el.scrollTop+el.clientHeight>=el.scrollHeight-8;el.textContent=t||"(empty)";if(bottom)el.scrollTop=el.scrollHeight;}catch{}}
+setInterval(refreshLog,3000);
+
+function render(){renderHead();renderDash();if(tab==="sys")renderSys();}
+
+/* ---------- firmware upload ---------- */
+$("#fwBtn").onclick=()=>{
+  const f=$("#fw").files[0];if(!f){toast("Choose a .bin file first");return;}
+  if(!confirm("Upload "+f.name+"? Outputs will be held off, and the controller restarts."))return;
+  const x=new XMLHttpRequest(),fd=new FormData();fd.append("firmware",f);
+  x.open("POST","/api/update");const pin=localStorage.getItem("wfpin");if(pin)x.setRequestHeader("X-Pin",pin);
+  $("#fwBar").classList.remove("hidden");
+  x.upload.onprogress=e=>{if(e.lengthComputable){$("#fwBar i").style.width=(100*e.loaded/e.total)+"%";$("#fwMsg").textContent="Uploading… "+Math.round(100*e.loaded/e.total)+"%";}};
+  x.onload=()=>{if(x.status===200){$("#fwMsg").textContent="Installed. Restarting…";waitBack();}else $("#fwMsg").textContent=(x.status===401?"PIN required or wrong.":"Update failed: "+x.responseText);};
+  x.onerror=()=>{$("#fwMsg").textContent="Connection dropped — the controller may be restarting…";waitBack();};
+  x.send(fd);
+};
+function waitBack(){let n=0;const t=setInterval(async()=>{n++;try{const r=await fetch("/api/state",{cache:"no-store"});if(r.ok){clearInterval(t);$("#fwMsg").textContent="Back online.";location.reload();}}catch{}if(n>40){clearInterval(t);$("#fwMsg").textContent="Did not come back within 80 s.";}},2000);}
+
+/* ---------- setpoints ---------- */
+const TZS=[["Mountain, no daylight saving (Arizona)","MST7"],["Pacific","PST8PDT,M3.2.0,M11.1.0"],["Mountain","MST7MDT,M3.2.0,M11.1.0"],["Central","CST6CDT,M3.2.0,M11.1.0"],["Eastern","EST5EDT,M3.2.0,M11.1.0"],["UTC","UTC0"]];
+const GROUPS=[
+ {t:"Tank level switches",d:"One entry per tank. A disabled tank is never checked and never filled automatically.",f:[
+   ...[0,1,2].flatMap(i=>[
+    {k:["tanks",i,"en"],l:TN[i].n+" — auto fill",h:"Watch this tank's level switch and fill it when it needs water.",type:"bool"},
+    {k:["tanks",i,"inv"],l:TN[i].s+" switch reads",h:"Which input state means the tank needs water. Flip this if the tank fills when it is already full.",type:"choice",o:[[false,"Active (closed) = needs water"],[true,"Active (closed) = full"]]},
+    {k:["tanks",i,"max"],l:TN[i].s+" fill fault limit",h:"Pump-on time allowed for one fill. If the tank still isn't full, the fill stops and latches a fault. 0 turns the limit off.",type:"num",u:"s",min:0,max:7200,st:30}])]},
+ {t:"Level switch timing",d:"",f:[
+   {k:["debounce"],l:"Level switch debounce",h:"A tank switch must hold its state this long before the controller believes it. Ignores splashing.",type:"num",u:"ms",min:0,max:10000,st:100}]},
+ {t:"Supply tank",d:"A low-level switch that keeps the pump from running dry.",f:[
+   {k:["supply","en"],l:"Use supply low-level switch",h:"Block the pump when the supply tank is empty.",type:"bool"},
+   {k:["supply","inv"],l:"Supply switch reads",h:"Which input state means the supply tank is empty.",type:"choice",o:[[false,"Active (closed) = empty"],[true,"Active (closed) = OK"]]},
+   {k:["supply","trip"],l:"Empty detect delay",h:"How long the switch must read empty before the pump stops. Keep this short: running dry hurts the pump.",type:"num",u:"s",min:0,max:60,st:1},
+   {k:["supply","recover"],l:"Refill recovery delay",h:"How long the supply must read OK before the pump may run again. Longer rides out sloshing at the intake.",type:"num",u:"s",min:0,max:600,st:5}]},
+ {t:"Pump",d:"",f:[
+   {k:["pump","on"],l:"Maximum continuous run",h:"The pump never runs longer than this without a rest.",type:"num",u:"s",min:1,max:600,st:1},
+   {k:["pump","off"],l:"Rest after a maximum run",h:"Cool-down before the pump may start again. 0 disables resting.",type:"num",u:"s",min:0,max:600,st:1},
+   {k:["pump","lead"],l:"Valve lead time",h:"The valve is moved into position this long before the pump starts.",type:"num",u:"ms",min:0,max:10000,st:100},
+   {k:["pump","lag"],l:"Valve lag time",h:"The pump is stopped this long before a valve moves or releases.",type:"num",u:"ms",min:0,max:10000,st:100}]},
+ {t:"Ozone",d:"",f:[
+   {k:["ozone","en"],l:"Ozone enabled",h:"Allow ozone runs from the button or this app.",type:"bool"},
+   {k:["ozone","run"],l:"Ozone run time",h:"Length of one ozone cycle.",type:"num",u:"s",min:1,max:1800,st:5}]},
+ {t:"Manual mode",d:"",f:[
+   {k:["manualMax"],l:"Maximum manual run",h:"A manual pump run stops by itself after this long. Manual runs ignore the tank level switches.",type:"num",u:"s",min:10,max:3600,st:10}]},
+ {t:"Fill window",d:"Optionally allow automatic fills only at certain hours, for example to keep the pump quiet at night.",f:[
+   {k:["sched","en"],l:"Restrict automatic fills",h:"When off, tanks are filled whenever they need water.",type:"bool"},
+   {k:["sched","start"],l:"Window opens",h:"",type:"time"},{k:["sched","end"],l:"Window closes",h:"If this is earlier than the opening time, the window runs overnight.",type:"time"}]},
+ {t:"Clock",d:"",f:[{k:["tz"],l:"Time zone",h:"Used for the fill window and daily totals. The clock itself is set automatically from the network.",type:"tz"}]},
+ {t:"Security",d:"",f:[{k:["pin"],l:"PIN",h:"When set, the PIN is required to change settings, run the machine or update firmware. Leave blank to keep the current PIN; type a new one to change it.",type:"pin"}]}
+];
+const getK=(o,k)=>k.reduce((a,x)=>a==null?a:a[x],o);
+function setK(o,k,v){let a=o;for(let i=0;i<k.length-1;i++)a=a[k[i]];a[k[k.length-1]]=v;}
+const hm=m=>pad(Math.floor(m/60))+":"+pad(m%60);
+const mins=v=>{const [h,m]=v.split(":").map(Number);return (isNaN(h)||isNaN(m))?0:h*60+m;};
+function fieldHtml(f,id){
+  let c="";
+  if(f.type==="bool")c=`<span class="sw"><input type="checkbox" id="${id}"><i></i></span>`;
+  else if(f.type==="num")c=`<span class="stepper"><button type="button" data-dec="${id}" aria-label="Decrease">−</button><input type="number" inputmode="numeric" id="${id}" min="${f.min}" max="${f.max}" step="${f.st}"><button type="button" data-inc="${id}" aria-label="Increase">+</button></span><span class="unit">${f.u}</span>`;
+  else if(f.type==="choice")c=`<select id="${id}">${f.o.map((o,i)=>`<option value="${i}">${esc(o[1])}</option>`).join("")}</select>`;
+  else if(f.type==="time")c=`<input type="time" id="${id}">`;
+  else if(f.type==="tz")c=`<select id="${id}">${TZS.map(z=>`<option value="${esc(z[1])}">${esc(z[0])}</option>`).join("")}<option value="__custom">Custom…</option></select>`;
+  else if(f.type==="pin")c=`<input type="password" id="${id}" autocomplete="new-password" inputmode="numeric" placeholder="" maxlength="10" style="width:130px">`;
+  return `<div class="field" id="f_${id}"><div class="nm">${esc(f.l)}</div><div class="ctl">${c}</div>${f.h?`<div class="help">${esc(f.h)}</div>`:""}</div>`;
+}
+function buildSettings(){
+  let n=0;
+  $("#setForm").innerHTML=GROUPS.map(g=>`<div class="card sec"><h2>${g.t}</h2>${g.d?`<p class="sub" style="margin-bottom:4px">${g.d}</p>`:""}${g.f.map(f=>{f.id="s"+(n++);return fieldHtml(f,f.id);}).join("")}</div>`).join("");
+  $("#setForm").insertAdjacentHTML("beforeend",netCardHtml());
+  wireNet();
+  GROUPS.forEach(g=>g.f.forEach(f=>{
+    const el=$("#"+f.id);
+    const upd=()=>{
+      if(!DRAFT)return;
+      let v;
+      if(f.type==="bool")v=el.checked;
+      else if(f.type==="num"){v=Math.max(f.min,Math.min(f.max,Math.round(+el.value||0)));}
+      else if(f.type==="choice")v=f.o[+el.value][0];
+      else if(f.type==="time")v=mins(el.value);
+      else if(f.type==="tz"){v=el.value==="__custom"?(prompt("POSIX time zone string (e.g. PST8PDT,M3.2.0,M11.1.0)",DRAFT.tz)||DRAFT.tz):el.value;}
+      else v=el.value;
+      setK(DRAFT,f.k,v);markDirty();
+    };
+    el.addEventListener("change",upd);
+    if(f.type==="num"){
+      $(`[data-dec="${f.id}"]`).onclick=()=>{el.value=Math.max(f.min,(+el.value||0)-f.st);upd();};
+      $(`[data-inc="${f.id}"]`).onclick=()=>{el.value=Math.min(f.max,(+el.value||0)+f.st);upd();};
+    }
+  }));
+}
+function fillSettings(){
+  if(!DRAFT)return;
+  GROUPS.forEach(g=>g.f.forEach(f=>{
+    const el=$("#"+f.id);let v=getK(DRAFT,f.k);
+    if(f.type==="bool")el.checked=!!v;
+    else if(f.type==="num")el.value=v;
+    else if(f.type==="choice")el.value=f.o.findIndex(o=>o[0]===v);
+    else if(f.type==="time")el.value=hm(v);
+    else if(f.type==="tz"){if(![...el.options].some(o=>o.value===v)){const o=new Option("Custom: "+v,v);el.insertBefore(o,el.lastChild);}el.value=v;}
+    else if(f.type==="pin")el.value="";
+  }));
+  markDirty();
+}
+const strip=o=>{const c=JSON.parse(JSON.stringify(o));delete c.pin;delete c.pinSet;return c;};
+function isDirty(){if(!DRAFT||!CFG)return false;return JSON.stringify(strip(DRAFT))!==JSON.stringify(strip(CFG))||!!DRAFT.pin;}
+function markDirty(){
+  GROUPS.forEach(g=>g.f.forEach(f=>{const pin=f.type==="pin";const ch=DRAFT&&CFG&&(pin?!!DRAFT.pin:JSON.stringify(getK(DRAFT,f.k))!==JSON.stringify(getK(CFG,f.k)));$("#f_"+f.id).classList.toggle("changed",!!ch);}));
+  $("#saveBar").classList.toggle("hidden",!isDirty());
+}
+async function loadCfg(){
+  try{CFG=await api("/api/config");}catch{return;}
+  if(!DRAFT||!isDirty()){DRAFT=JSON.parse(JSON.stringify(CFG));DRAFT.pin="";}
+  if(DRAFT&&!("pin" in DRAFT))DRAFT.pin="";
+  fillSettings();
+}
+$("#saveBtn").onclick=async()=>{
+  const body=JSON.parse(JSON.stringify(DRAFT));delete body.pinSet;if(!body.pin)delete body.pin;
+  try{await api("/api/config",{method:"POST",body:JSON.stringify(body)});
+    if(body.pin)localStorage.setItem("wfpin",body.pin);
+    toast("Settings saved");DRAFT=null;await new Promise(r=>setTimeout(r,400));await loadCfg();pollState();}
+  catch(e){toast(e.message);}
+};
+$("#discardBtn").onclick=()=>{DRAFT=JSON.parse(JSON.stringify(CFG));DRAFT.pin="";fillSettings();};
+
+/* ---------- network & Home Assistant ---------- */
+let NET=null;
+function netCardHtml(){return `<div class="card sec" id="netCard"><h2>Network &amp; Home Assistant</h2>
+  <p class="sub" style="margin-bottom:4px">Applied with its own Save button. If the controller can't join the new network within 45 s it opens its own access point so you can correct it.</p>
+  <div class="field"><div class="nm">Wi-Fi network</div><div class="ctl"><input type="text" id="nSsid" list="nList" maxlength="32" autocomplete="off" style="width:190px"><datalist id="nList"></datalist><button class="btn sm" id="nScan">Scan</button></div><div class="help" id="nStat"></div></div>
+  <div class="field"><div class="nm">Wi-Fi password</div><div class="ctl"><input type="password" id="nPass" maxlength="63" autocomplete="new-password" placeholder="unchanged" style="width:190px"></div><div class="help">Leave blank to keep the saved password.</div></div>
+  <div class="field"><div class="nm">Fallback access point password</div><div class="ctl"><input type="password" id="nAp" maxlength="19" autocomplete="new-password" placeholder="unchanged" style="width:190px"></div><div class="help" id="nApHelp">8–19 characters. The access point is named after the controller and only appears when Wi-Fi fails.</div></div>
+  <div class="field"><div class="nm">Home Assistant (MQTT)</div><div class="ctl"><span class="sw"><input type="checkbox" id="mEn" aria-label="Enable MQTT"><i></i></span></div><div class="help" id="mStat"></div></div>
+  <div class="field"><div class="nm">Broker address</div><div class="ctl"><input type="text" id="mHost" maxlength="47" style="width:190px"><input type="number" id="mPort" min="1" max="65535" style="width:84px"></div><div class="help">Host name or IP, and port (usually 1883).</div></div>
+  <div class="field"><div class="nm">Broker user</div><div class="ctl"><input type="text" id="mUser" maxlength="23" autocomplete="off" style="width:190px"></div><div class="help">Leave blank if the broker needs no login.</div></div>
+  <div class="field"><div class="nm">Broker password</div><div class="ctl"><input type="password" id="mPass" maxlength="31" autocomplete="new-password" placeholder="unchanged" style="width:190px"></div><div class="help">Leave blank to keep the saved password.</div></div>
+  <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn primary" id="nSave">Save network settings</button></div></div>`;}
+function fillNet(force){
+  if(!NET)return;
+  const act=document.activeElement&&document.activeElement.closest&&document.activeElement.closest("#netCard");
+  if(act&&!force)return;
+  $("#nSsid").value=NET.ssid;$("#nStat").textContent=NET.ap?"Not connected — fallback access point \""+NET.apSsid+"\" is active.":(NET.connected?"Connected · "+NET.ip+" · "+NET.rssi+" dBm":"Connecting…");
+  $("#mEn").checked=NET.mqtt.en;$("#mHost").value=NET.mqtt.host;$("#mPort").value=NET.mqtt.port;$("#mUser").value=NET.mqtt.user;
+  $("#mStat").textContent=!NET.mqtt.en?"Off.":(NET.mqtt.ok?"Connected. Entity id prefix: "+NET.mqtt.node:"Not connected to the broker.");
+  $("#nApHelp").textContent="8–19 characters. Access point name: "+NET.apSsid+(NET.apPassSet?" (password set).":".");
+}
+async function loadNet(){try{NET=await api("/api/net");fillNet();}catch{}}
+function wireNet(){
+  $("#nScan").onclick=async()=>{const b=$("#nScan");b.disabled=true;b.textContent="Scanning…";
+    try{for(let i=0;i<8;i++){const r=await (await fetch("/api/net/scan")).json();if(r.done){$("#nList").innerHTML=r.nets.map(n=>`<option value="${esc(n.s)}">${n.r} dBm${n.e?"":" (open)"}</option>`).join("");toast(r.nets.length+" networks found — pick one in the field");break;}await new Promise(r=>setTimeout(r,1200));}}catch{toast("Scan failed");}
+    b.disabled=false;b.textContent="Scan";};
+  $("#nSave").onclick=async()=>{
+    const body={};const v=id=>$("#"+id).value;
+    if(v("nSsid")&&v("nSsid")!==NET.ssid)body.ssid=v("nSsid");
+    if(v("nPass"))body.pass=v("nPass");
+    if(v("nAp")){if(v("nAp").length<8){toast("Access point password needs 8–19 characters");return;}body.apPass=v("nAp");}
+    if(body.ssid||body.pass){if(!confirm("Change the Wi-Fi settings? The controller reconnects now. If it can't join, it falls back to its access point."))return;}
+    const m={en:$("#mEn").checked,host:v("mHost").trim(),port:+v("mPort")||1883,user:v("mUser")};if(v("mPass"))m.pass=v("mPass");body.mqtt=m;
+    try{await api("/api/net",{method:"POST",body:JSON.stringify(body)});toast("Network settings saved");["nPass","nAp","mPass"].forEach(i=>$("#"+i).value="");setTimeout(async()=>{await loadNet();fillNet(true);},1500);}
+    catch(e){toast(e.message);}
+  };
+}
+
+/* ---------- history / trends ---------- */
+const EVT={1:"boot",2:"fill",3:"fault",4:"supply",5:"ozone",6:"mode",7:"stop",8:"clear",9:"settings",10:"ota",11:"io"};
+const REASON=["tank full","tank disabled","window closed","stopped by you","mode changed","fault","manual timer ended","I/O fault"];
+function evText(e){
+  const [t,ty,a0,a,b,pd]=e,tn=TN[a0]?TN[a0].n:"";
+  switch(ty){
+    case 1:return ["Controller started","info","chip"];
+    case 2:return [`${tn} fill finished — ${fmtDur(a)}, pump ran ${fmtDur(b)} (${REASON[pd&255]||"done"}${pd&256?", manual":""})`,(pd&255)===5?"crit":"good","drop"];
+    case 3:return [`${tn} FAULT — pump ran ${fmtDur(a)} and the tank never reported full`,"crit","alert"];
+    case 4:return [a0?"Supply tank went empty":"Supply tank restored",a0?"serious":"good",a0?"alert":"check"];
+    case 5:return [`Ozone ran ${fmtDur(a)}`,"","bolt"];
+    case 6:return ["Mode changed to "+(a0?"Auto":"Manual"),"","sliders"];
+    case 7:return ["Stop pressed","","stop"];
+    case 8:return [tn+" fault cleared","","check"];
+    case 9:return ["Settings changed","","sliders"];
+    case 10:return ["Firmware updated","","chip"];
+    case 11:return [a0?"I/O expander stopped responding":"I/O expander recovered",a0?"crit":"good","alert"];
+  }return ["Event "+ty,"","info"];
+}
+async function loadHist(){try{HIST=await (await fetch("/api/history")).json();}catch{return;}renderTrends();}
+function niceMax(v){if(v<=4)return 4;const p=Math.pow(10,Math.floor(Math.log10(v)));const m=v/p;return (m<=1?1:m<=2?2:m<=5?5:10)*p;}
+function yTicks(max){const step=max/4;return [0,1,2,3,4].map(i=>i*step);}
+const tip=$("#tip");
+function showTip(html,ev){tip.innerHTML=html;tip.style.opacity=1;const w=tip.offsetWidth,h=tip.offsetHeight;let x=ev.clientX+14,y=ev.clientY-h-10;if(x+w>innerWidth-8)x=ev.clientX-w-14;if(y<8)y=ev.clientY+16;tip.style.left=x+"px";tip.style.top=y+"px";}
+function hideTip(){tip.style.opacity=0;}
+function wireTips(root){
+  $$("[data-tip]",root).forEach(el=>{
+    el.addEventListener("pointermove",e=>showTip(el.dataset.tip,e));
+    el.addEventListener("pointerdown",e=>showTip(el.dataset.tip,e));
+    el.addEventListener("pointerleave",hideTip);
+  });
+}
+function topRound(x,y,w,h,r){r=Math.min(r,w/2,h);return `M${x} ${y+h}V${y+r}Q${x} ${y} ${x+r} ${y}H${x+w-r}Q${x+w} ${y} ${x+w} ${y+r}V${y+h}Z`;}
+
+function drawTimeline(){
+  const el=$("#tl"),W=Math.max(300,el.clientWidth||600);
+  const now=HIST.now||Math.floor(Date.now()/1000),hours=Math.min(range,7)*24,t0=now-hours*3600;
+  const rows=["CPAP","Brian","Dina","Ozone","Supply empty"],L=92,R=10,T=6,RH=34,B=26,H=T+rows.length*RH+B;
+  const x=t=>L+(Math.max(t0,Math.min(now,t))-t0)/(now-t0)*(W-L-R);
+  let g="";
+  const ticks=[];const step=hours<=24?4*3600:86400;
+  for(let t=Math.ceil(t0/step)*step;t<=now;t+=step)ticks.push(t);
+  ticks.forEach(t=>{const d=new Date(t*1000);g+=`<line class="gl" x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H-B}"/><text x="${x(t)}" y="${H-8}" text-anchor="middle">${hours<=24?d.toLocaleTimeString([],{hour:"numeric"}):d.toLocaleDateString([],{weekday:"short",day:"numeric"})}</text>`;});
+  rows.forEach((r,i)=>{const y=T+i*RH;g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y+RH}" y2="${y+RH}"/><text class="lbl" x="${L-10}" y="${y+RH/2+4}" text-anchor="end">${r}</text>`;});
+  g+=`<line class="ax" x1="${L}" x2="${W-R}" y1="${H-B}" y2="${H-B}"/>`;
+  let marks="",hits="";
+  const bar=(row,a,b,col,tipHtml)=>{const x0=x(a),x1=x(b),w=Math.max(6,x1-x0),y=T+row*RH+9;
+    marks+=`<rect x="${x0}" y="${y}" width="${w}" height="16" rx="4" fill="${col}"/>`;
+    hits+=`<rect class="hit" x="${x0-4}" y="${T+row*RH+2}" width="${w+8}" height="${RH-4}" data-tip="${esc(tipHtml)}"/>`;};
+  const sup=[];let open=null;
+  HIST.ev.forEach(e=>{const [t,ty,a0,a,b,pd]=e;if(!t)return;
+    if(ty===2&&t>=t0&&a0<3)bar(a0,t-a,t,TCOL[a0],`<b>${TN[a0].n}</b><br>${fmtDT(t-a)} · ${fmtDur(a)}<br>pump ${fmtDur(b)} · ${REASON[pd&255]||""}`);
+    else if(ty===5&&t>=t0)bar(3,t-a,t,"var(--oz)",`<b>Ozone</b><br>${fmtDT(t-a)} · ${fmtDur(a)}`);
+    else if(ty===3&&t>=t0&&a0<3){const cx=x(t),cy=T+a0*RH+17;marks+=`<path d="M${cx} ${cy-9}L${cx+9} ${cy+7}H${cx-9}Z" fill="var(--crit)" stroke="var(--surface)" stroke-width="2"/><path d="M${cx} ${cy-3}v5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>`;hits+=`<rect class="hit" x="${cx-12}" y="${cy-12}" width="24" height="24" data-tip="${esc("<b>Fault — "+TN[a0].n+"</b><br>"+fmtDT(t)+"<br>pump ran "+fmtDur(a))}"/>`;}
+    else if(ty===4){if(a0){open=t;}else if(open!==null){sup.push([open,t]);open=null;}}
+  });
+  if(open!==null)sup.push([open,now]);
+  sup.forEach(([a,b])=>{if(b>=t0)bar(4,Math.max(a,t0),b,"var(--serious)",`<b>Supply tank empty</b><br>${fmtDT(a)} → ${fmtDT(b)}<br>${fmtDur(b-a)}`);});
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Timeline of fills over the last ${hours} hours">${g}${marks}${hits}</svg>`;
+  wireTips(el);
+  $("#tlSub").textContent="Last "+(hours<=24?"24 hours":hours/24+" days")+" · each bar is one fill";
+  $("#tlLegend").innerHTML=TN.map((t,i)=>`<span><i style="background:${TCOL[i]}"></i>${t.s}</span>`).join("")+`<span><i style="background:var(--oz)"></i>Ozone</span><span><i style="background:var(--serious)"></i>Supply empty</span><span><svg style="width:12px;height:12px;vertical-align:-1px;margin-right:5px;color:var(--crit)"><use href="#i-alert"/></svg>Fault</span>`;
+}
+function dayRows(n){
+  const last=HIST.day||(HIST.days.length?HIST.days[HIST.days.length-1][0]:0);const map={};HIST.days.forEach(d=>map[d[0]]=d);
+  const out=[];for(let i=n-1;i>=0;i--){const dd=last-i;const r=map[dd];out.push(r?{day:dd,pump:r[1],f:[r[2],r[3],r[4]],oz:r[5],ozs:r[6],fl:r[7]}:{day:dd,pump:0,f:[0,0,0],oz:0,ozs:0,fl:0});}
+  return out;
+}
+function drawColumns(elId,rows,series,fmt,unit){
+  const el=$("#"+elId),W=Math.max(300,el.clientWidth||600),L=40,R=8,T=10,B=26,H=200;
+  const totals=rows.map(r=>series.reduce((a,s)=>a+s.v(r),0));
+  const max=niceMax(Math.max(1,...totals));
+  const y=v=>T+(H-T-B)*(1-v/max),band=(W-L-R)/rows.length,bw=Math.min(24,Math.max(4,band-4));
+  let g="";
+  yTicks(max).forEach(v=>{g+=`<line class="gl" x1="${L}" x2="${W-R}" y1="${y(v)}" y2="${y(v)}"/><text x="${L-8}" y="${y(v)+4}" text-anchor="end">${Number.isInteger(v)?v:v.toFixed(1)}</text>`;});
+  g+=`<line class="ax" x1="${L}" x2="${W-R}" y1="${y(0)}" y2="${y(0)}"/>`;
+  const every=Math.ceil(rows.length/(W<480?5:9));let m="",h="";
+  rows.forEach((r,i)=>{
+    const cx=L+band*i+band/2,x0=cx-bw/2;let acc=0;const segs=series.map(s=>({s,v:s.v(r)})).filter(o=>o.v>0);
+    segs.forEach((o,k)=>{const y1=y(acc+o.v),y0=y(acc),top=k===segs.length-1;const hh=Math.max(1,y0-y1-(k>0?2:0));const yy=y0-hh-(k>0?2:0);
+      m+=top?`<path d="${topRound(x0,yy,bw,hh,4)}" fill="${o.s.c}"/>`:`<rect x="${x0}" y="${yy}" width="${bw}" height="${hh}" fill="${o.s.c}"/>`;acc+=o.v;});
+    const d=dayDate(r.day);
+    if(i%every===0||i===rows.length-1)g+=`<text x="${cx}" y="${H-8}" text-anchor="middle">${d.toLocaleDateString([],{month:"short",day:"numeric",timeZone:"UTC"})}</text>`;
+    const tipHtml=`<b>${fmtDay(r.day)}</b><br>`+series.map(s=>`${s.n}: ${fmt(s.v(r))}`).join("<br>");
+    h+=`<rect class="hit" x="${cx-band/2}" y="${T}" width="${band}" height="${H-T-B}" data-tip="${esc(tipHtml)}"/>`;
+  });
+  el.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="${unit} per day">${g}${m}${h}</svg>`;
+  wireTips(el);
+}
+function tableHtml(head,rows){return `<div class="scroll"><table class="data"><thead><tr>${head.map((h,i)=>`<th${i?' class="n"':""}>${h}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map((c,i)=>`<td${i?' class="n"':""}>${c}</td>`).join("")}</tr>`).join("")}</tbody></table></div>`;}
+function renderTrends(){
+  if(!HIST)return;
+  drawTimeline();
+  const n=Math.max(7,range);const rows=dayRows(n);
+  drawColumns("fd",rows,TN.map((t,i)=>({n:t.s,c:TCOL[i],v:r=>r.f[i]})),v=>v+(v===1?" fill":" fills"),"Fills");
+  $("#fdLegend").innerHTML=TN.map((t,i)=>`<span><i style="background:${TCOL[i]}"></i>${t.n}</span>`).join("");
+  drawColumns("pd",rows,[{n:"Pump",c:"var(--pump)",v:r=>r.pump/60}],v=>v.toFixed(1)+" min","Pump minutes");
+  $("#fdTbl").innerHTML=tableHtml(["Day",...TN.map(t=>t.s)],[...rows].reverse().map(r=>[fmtDay(r.day),...r.f]));
+  $("#pdTbl").innerHTML=tableHtml(["Day","Pump minutes"],[...rows].reverse().map(r=>[fmtDay(r.day),(r.pump/60).toFixed(1)]));
+  const now=HIST.now,t0=now-Math.min(range,7)*86400;
+  $("#tlTbl").innerHTML=tableHtml(["When","Tank","Duration","Pump","Why"],HIST.ev.filter(e=>e[1]===2&&e[0]>=t0).reverse().map(e=>[fmtDT(e[0]-e[3]),TN[e[2]].s,fmtDur(e[3]),fmtDur(e[4]),(REASON[e[5]&255]||"")+(e[5]&256?" (manual)":"")]));
+  const list=[...HIST.ev].reverse().filter(e=>e[1]!==9||true).slice(0,60);
+  $("#evlist").innerHTML=list.length?list.map(e=>{const [txt,k,i]=evText(e);return `<div class="evt ${k}">${ic(i)}<div>${esc(txt)}<small>${e[0]?fmtDT(e[0]):"time not set"}</small></div></div>`;}).join(""):`<p class="sub">No events yet.</p>`;
+}
+$$(".tblbtn").forEach(b=>b.onclick=()=>{const id=b.dataset.for;const t=$("#"+id+"Tbl");const show=t.classList.toggle("hidden")===false;$("#"+id).classList.toggle("hidden",show);b.textContent=show?"Chart":"Table";});
+$("#rangeSeg").addEventListener("click",e=>{const b=e.target.closest("button");if(!b)return;range=+b.dataset.r;$$("#rangeSeg button").forEach(x=>x.setAttribute("aria-pressed",x===b));renderTrends();});
+$("#csvBtn").onclick=()=>{if(!HIST)return;const rows=[["time","event","tank","seconds","pump_seconds","detail"]];HIST.ev.forEach(e=>{const [t,ty,a0,a,b,pd]=e;rows.push([t?new Date(t*1000).toISOString():"",EVT[ty]||ty,a0,a,b,pd]);});
+  const blob=new Blob([rows.map(r=>r.join(",")).join("\n")],{type:"text/csv"});const a=document.createElement("a");a.href=URL.createObjectURL(blob);a.download="waterfill-events.csv";a.click();};
+let rz;addEventListener("resize",()=>{clearTimeout(rz);rz=setTimeout(()=>{if(tab==="trends")renderTrends();},150);});
+
+/* ---------- tabs, theme, controls ---------- */
+function showTab(t){
+  tab=t;$$(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===t));
+  ["dash","trends","set","sys"].forEach(k=>$("#p-"+k).classList.toggle("hidden",k!==t));
+  if(t==="trends")loadHist();if(t==="set"){loadCfg();loadNet();}if(t==="sys"){renderSys();refreshLog();}
+  history.replaceState(null,"","#"+t);window.scrollTo(0,0);
+}
+$$(".tab").forEach(b=>b.onclick=()=>showTab(b.dataset.tab));
+function applyTheme(m){const r=document.documentElement;if(m==="auto")r.removeAttribute("data-theme");else r.setAttribute("data-theme",m);$("#themeBtn").title="Theme: "+m;try{localStorage.setItem("wftheme",m);}catch{}}
+$("#themeBtn").onclick=()=>{const c=(localStorage.getItem("wftheme")||"auto");applyTheme({auto:"light",light:"dark",dark:"auto"}[c]);toast("Theme: "+localStorage.getItem("wftheme"));};
+try{applyTheme(localStorage.getItem("wftheme")||"auto");}catch{}
+$("#mAuto").onclick=()=>cmd("mode",{v:"auto"});$("#mMan").onclick=()=>cmd("mode",{v:"manual"});
+$("#stopBtn").onclick=()=>cmd("stop");
+$("#ozRun").onclick=()=>cmd("ozone");$("#ozStop").onclick=()=>cmd("ozstop");
+
+/* ---------- full screen (phones: hides the browser bars) ---------- */
+const FSE=document.documentElement,
+  fsOK=!!(document.fullscreenEnabled||document.webkitFullscreenEnabled),
+  fsEl=()=>document.fullscreenElement||document.webkitFullscreenElement;
+function fsSync(){const on=!!fsEl(),b=$("#fsBtn");b.setAttribute("aria-pressed",on);b.title=b.ariaLabel=on?"Exit full screen":"Full screen";
+  b.firstElementChild.innerHTML=`<use href="#i-${on?"compress":"expand"}"/>`;}
+if(fsOK){
+  document.documentElement.classList.add("fs-ok");
+  $("#fsBtn").onclick=async()=>{try{
+    if(fsEl())await (document.exitFullscreen||document.webkitExitFullscreen).call(document);
+    else await (FSE.requestFullscreen||FSE.webkitRequestFullscreen).call(FSE,{navigationUI:"hide"});
+  }catch(e){toast("Full screen isn't available in this browser");}};
+  ["fullscreenchange","webkitfullscreenchange"].forEach(ev=>document.addEventListener(ev,()=>{fsSync();if(tab==="trends")setTimeout(renderTrends,150);}));
+}
+
+buildSchematic();buildTanks();buildSettings();
+loadCfg().then(()=>{if(S)render();});
+connect();pollState();
+{const h=location.hash.slice(1);showTab(["dash","trends","set","sys"].includes(h)?h:"dash");}
+setInterval(()=>{if(tab==="trends"&&!document.hidden)loadHist();},60000);
+</script>
+</body>
+</html>
