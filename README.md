@@ -1,5 +1,12 @@
 # WaterFill
 
+![ESP32](https://img.shields.io/badge/ESP32-E7352C?logo=espressif&logoColor=white)
+![Arduino](https://img.shields.io/badge/Arduino-00878F?logo=arduino&logoColor=white)
+![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=cplusplus&logoColor=white)
+![Tests](https://img.shields.io/badge/safety%20checks-4.1M%20passing-2ea44f)
+![MQTT](https://img.shields.io/badge/MQTT-660066?logo=mqtt&logoColor=white)
+![Status](https://img.shields.io/badge/status-firmware%20running-yellow)
+
 An ESP32 controller that keeps three bedside water reservoirs topped up automatically: a CPAP
 humidifier and two bed-cooling units (Dock Pro). It runs one pump and two solenoid valves from a
 shared supply tank and adds a timed ozone treatment, with a live web dashboard and Home Assistant
@@ -18,6 +25,23 @@ SUPPLY ─▶ PUMP ─▶ V1 ─┬─▶ CPAP          (V1 on)
 A level switch in each tank calls for water. The controller routes the flow with the valves,
 runs the pump until that tank's switch reads full, then moves on to the next tank that needs
 water.
+
+This is a rewrite of an earlier sketch (kept in `source/`). The new version separates the control
+logic from the hardware so the logic can be tested properly. A machine that pumps water next to
+a bed has to fail safe.
+
+## Screens
+
+| | |
+|:---:|:---:|
+| ![Filling a tank](docs/images/filling.png) | ![Supply empty](docs/images/supply-empty.png) |
+| **Filling**: the live diagram shows the active path | **Supply empty**: the pump is blocked until the supply refills |
+| ![Trends](docs/images/trends.png) | ![Setpoints](docs/images/setpoints.png) |
+| **Trends**: activity timeline, fills per day, pump run time | **Setpoints**: per-tank switches, polarity and fault limits |
+| ![System](docs/images/system.png) | <img src="docs/images/mobile.png" width="300" alt="Phone layout"> |
+| **System**: live I/O, controller info, lifetime totals, OTA | **Phone layout** |
+
+<sub>Captured from <code>tools/mock_server.py</code>, which simulates the controller (run it with <code>MOCK_SCENARIO=supply</code>, <code>fault</code>, etc.).</sub>
 
 ## Safety first
 
